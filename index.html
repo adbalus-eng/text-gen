@@ -324,17 +324,27 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
 <div class="toast" id="toast"></div>
 
 <script>
-  const DEFAULT_PROMPTS = [
-    {
-      name: "Threads投稿",
-      prompt: "Threads投稿を1つ生成して。テキストのみ出力、説明・前置き・記号は不要。\n\n条件：\n- 金額を必ず入れる（1万〜7万でランダム）\n- 未確定の表現のみ使う（狙いたい・いきたい・いけるかな・頼む など）\n- 確定・達成表現は禁止（いけた・取れた・達成・できた など）\n- 20代女性のゆるい口調、ホス狂っぽいニュアンスOK\n- 1〜2行のみ\n- 毎回違う言い回し\n- ポジティブな内容\n\n例：\nちょっといい感じだから、2万後半くらいは狙いたいなー もう少し流れきたら4万くらい行けるかな"
-    }
-  ];
-
-  let prompts = JSON.parse(localStorage.getItem('prompts_v2') || 'null') || DEFAULT_PROMPTS;
+  let prompts = [];
   let activeIndex = 0;
 
-  function savePrompts() { localStorage.setItem('prompts_v2', JSON.stringify(prompts)); }
+  async function loadPrompts() {
+    try {
+      const res = await fetch('/api/prompts');
+      prompts = await res.json();
+    } catch {
+      prompts = [{ name: 'Threads投稿', prompt: 'プロンプトを読み込めませんでした' }];
+    }
+    renderTabs();
+    renderPrompt();
+  }
+
+  async function savePrompts() {
+    await fetch('/api/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(prompts)
+    });
+  }
 
   function renderTabs() {
     const container = document.getElementById('tabsContainer');
@@ -357,10 +367,10 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     document.getElementById('promptPreview').textContent = prompts[activeIndex].prompt;
   }
 
-  function addPrompt() {
+  async function addPrompt() {
     prompts.push({ name: '新規プロンプト', prompt: 'ここにプロンプトを入力してください。' });
     activeIndex = prompts.length - 1;
-    savePrompts(); renderTabs(); renderPrompt(); startEdit();
+    await savePrompts(); renderTabs(); renderPrompt(); startEdit();
   }
 
   function startEdit() {
@@ -375,10 +385,10 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     document.getElementById('promptPreview').style.display = 'block';
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     prompts[activeIndex].name = document.getElementById('editName').value || 'プロンプト';
     prompts[activeIndex].prompt = document.getElementById('editPrompt').value;
-    savePrompts(); cancelEdit(); renderTabs(); renderPrompt();
+    await savePrompts(); cancelEdit(); renderTabs(); renderPrompt();
     showToast('保存しました');
   }
 
@@ -391,10 +401,10 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     document.getElementById('deleteModal').classList.remove('show');
   }
 
-  function deletePrompt() {
+  async function deletePrompt() {
     prompts.splice(activeIndex, 1);
     activeIndex = Math.max(0, activeIndex - 1);
-    savePrompts(); closeDeleteModal(); renderTabs(); renderPrompt();
+    await savePrompts(); closeDeleteModal(); renderTabs(); renderPrompt();
   }
 
   async function generate() {
@@ -445,8 +455,7 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     setTimeout(() => toast.classList.remove('show'), 2000);
   }
 
-  renderTabs();
-  renderPrompt();
+  loadPrompts();
 </script>
 
 </body>
