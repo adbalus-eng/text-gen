@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>テキスト生成</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c28;
+  --border: #2a2a3a;
+  --accent: #7c6aff;
+  --accent2: #ff6a9b;
+  --accent3: #6affd4;
+  --text: #e8e8f0;
+  --text-dim: #888899;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 0 100px;
+}
+
+header {
+  padding: 24px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+/* Tabs */
+.tabs-wrap { padding: 14px 16px 0; }
+.tabs-label { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.2s;
+  position: relative;
+}
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.btn-add-tab {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* Prompt Card */
+.prompt-card {
+  margin: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.prompt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.prompt-card-title { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+
+.prompt-actions { display: flex; gap: 8px; }
+
+.btn-edit { font-size: 12px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+.btn-delete { font-size: 12px; color: #ff6b6b; background: none; border: none; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+
+.prompt-preview {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Edit Form */
+.prompt-edit { display: none; }
+.edit-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+
+.tab-name-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  margin-bottom: 10px;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+.prompt-edit textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Noto Sans JP', sans-serif;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 120px;
+  outline: none;
+}
+.prompt-edit textarea:focus { border-color: var(--accent); }
+
+.edit-actions { display: flex; gap: 8px; margin-top: 10px; }
+.btn-cancel { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+.btn-save { flex: 1; background: var(--accent); border: none; color: #fff; border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+
+/* Generate */
+.generate-wrap { padding: 0 16px; }
+
+.btn-generate {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  border-radius: var(--radius);
+  padding: 18px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  letter-spacing: 1px;
+  transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 8px 30px rgba(124,106,255,0.3);
+}
+.btn-generate:active { transform: scale(0.98); opacity: 0.9; }
+.btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Result */
+.result-wrap { margin: 16px 16px 0; }
+.result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.result-label { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+
+.btn-copy {
+  font-size: 12px; color: var(--accent3); background: none;
+  border: 1px solid var(--accent3); border-radius: 20px;
+  padding: 5px 12px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif;
+}
+
+.result-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 80px;
+}
+.result-box.streaming { border-color: var(--accent); }
+.result-box .placeholder { color: var(--text-dim); font-size: 13px; }
+
+.loading-dot {
+  display: inline-block; width: 7px; height: 7px;
+  background: var(--accent); border-radius: 50%;
+  animation: pulse 1s infinite; margin: 3px;
+  vertical-align: middle;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.error-msg {
+  margin: 12px 16px 0;
+  background: rgba(255,80,80,0.1);
+  border: 1px solid rgba(255,80,80,0.3);
+  border-radius: 10px; padding: 12px 14px;
+  font-size: 13px; color: #ff6b6b; display: none;
+}
+
+.toast {
+  position: fixed; bottom: 30px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--accent3); color: #0a0a0f;
+  padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; font-weight: 700;
+  opacity: 0; transition: all 0.3s;
+  pointer-events: none; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 50; display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+}
+.modal h3 { font-size: 14px; color: var(--text); margin-bottom: 14px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+.btn-modal-cancel { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+.btn-modal-ok { flex: 1; background: #ff6b6b; border: none; color: #fff; border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TEXT GEN</h1>
+  <p>ワンタップで文章を生成</p>
+</header>
+
+<!-- Tabs -->
+<div class="tabs-wrap">
+  <div class="tabs-label">プロンプト選択</div>
+  <div class="tabs" id="tabsContainer"></div>
+</div>
+
+<!-- Prompt Card -->
+<div class="prompt-card">
+  <div class="prompt-card-header">
+    <span class="prompt-card-title">プロンプト内容</span>
+    <div class="prompt-actions">
+      <button class="btn-edit" onclick="startEdit()">✏️ 編集</button>
+      <button class="btn-delete" onclick="confirmDelete()">🗑️ 削除</button>
+    </div>
+  </div>
+
+  <div id="promptPreview" class="prompt-preview"></div>
+
+  <div id="promptEdit" class="prompt-edit">
+    <div class="edit-label">タブ名</div>
+    <input type="text" class="tab-name-input" id="editName" placeholder="タブ名" />
+    <div class="edit-label">プロンプト</div>
+    <textarea id="editPrompt" rows="6"></textarea>
+    <div class="edit-actions">
+      <button class="btn-cancel" onclick="cancelEdit()">キャンセル</button>
+      <button class="btn-save" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate -->
+<div class="generate-wrap">
+  <button class="btn-generate" id="generateBtn" onclick="generate()">⚡ ワンタップ生成</button>
+</div>
+
+<div class="error-msg" id="errorMsg"></div>
+
+<!-- Result -->
+<div class="result-wrap">
+  <div class="result-header">
+    <span class="result-label">生成結果</span>
+    <button class="btn-copy" onclick="copyResult()">📋 コピー</button>
+  </div>
+  <div class="result-box" id="resultBox">
+    <span class="placeholder">ここに生成された文章が表示されます</span>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>このプロンプトを削除しますか？</h3>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeDeleteModal()">キャンセル</button>
+      <button class="btn-modal-ok" onclick="deletePrompt()">削除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const DEFAULT_PROMPTS = [
+    {
+      name: "Threads投稿",
+      prompt: "Threads投稿を1つ生成して。テキストのみ出力、説明・前置き・記号は不要。\n\n条件：\n- 金額を必ず入れる（1万〜7万でランダム）\n- 未確定の表現のみ使う（狙いたい・いきたい・いけるかな・頼む など）\n- 確定・達成表現は禁止（いけた・取れた・達成・できた など）\n- 20代女性のゆるい口調、ホス狂っぽいニュアンスOK\n- 1〜2行のみ\n- 毎回違う言い回し\n- ポジティブな内容\n\n例：\nちょっといい感じだから、2万後半くらいは狙いたいなー もう少し流れきたら4万くらい行けるかな"
+    }
+  ];
+
+  let prompts = JSON.parse(localStorage.getItem('prompts_v2') || 'null') || DEFAULT_PROMPTS;
+  let activeIndex = 0;
+
+  function savePrompts() { localStorage.setItem('prompts_v2', JSON.stringify(prompts)); }
+
+  function renderTabs() {
+    const container = document.getElementById('tabsContainer');
+    container.innerHTML = '';
+    prompts.forEach((p, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (i === activeIndex ? ' active' : '');
+      btn.textContent = p.name;
+      btn.onclick = () => { activeIndex = i; cancelEdit(); renderTabs(); renderPrompt(); };
+      container.appendChild(btn);
+    });
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-add-tab';
+    addBtn.textContent = '＋ 追加';
+    addBtn.onclick = addPrompt;
+    container.appendChild(addBtn);
+  }
+
+  function renderPrompt() {
+    document.getElementById('promptPreview').textContent = prompts[activeIndex].prompt;
+  }
+
+  function addPrompt() {
+    prompts.push({ name: '新規プロンプト', prompt: 'ここにプロンプトを入力してください。' });
+    activeIndex = prompts.length - 1;
+    savePrompts(); renderTabs(); renderPrompt(); startEdit();
+  }
+
+  function startEdit() {
+    document.getElementById('promptPreview').style.display = 'none';
+    document.getElementById('promptEdit').style.display = 'block';
+    document.getElementById('editName').value = prompts[activeIndex].name;
+    document.getElementById('editPrompt').value = prompts[activeIndex].prompt;
+  }
+
+  function cancelEdit() {
+    document.getElementById('promptEdit').style.display = 'none';
+    document.getElementById('promptPreview').style.display = 'block';
+  }
+
+  function saveEdit() {
+    prompts[activeIndex].name = document.getElementById('editName').value || 'プロンプト';
+    prompts[activeIndex].prompt = document.getElementById('editPrompt').value;
+    savePrompts(); cancelEdit(); renderTabs(); renderPrompt();
+    showToast('保存しました');
+  }
+
+  function confirmDelete() {
+    if (prompts.length <= 1) { showToast('最後のプロンプトは削除できません'); return; }
+    document.getElementById('deleteModal').classList.add('show');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+  }
+
+  function deletePrompt() {
+    prompts.splice(activeIndex, 1);
+    activeIndex = Math.max(0, activeIndex - 1);
+    savePrompts(); closeDeleteModal(); renderTabs(); renderPrompt();
+  }
+
+  async function generate() {
+    const prompt = prompts[activeIndex].prompt;
+    const btn = document.getElementById('generateBtn');
+    const resultBox = document.getElementById('resultBox');
+    const errorMsg = document.getElementById('errorMsg');
+
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+    errorMsg.style.display = 'none';
+    resultBox.className = 'result-box streaming';
+    resultBox.innerHTML = '<span class="loading-dot"></span><span class="loading-dot" style="animation-delay:0.2s"></span><span class="loading-dot" style="animation-delay:0.4s"></span>';
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] })
+      });
+
+      if (!response.ok) throw new Error('サーバーエラーが発生しました');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let result = '';
+      resultBox.innerHTML = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              result += parsed.delta.text;
+              resultBox.textContent = result;
+            }
+          } catch {}
+        }
+      }
+
+      resultBox.className = 'result-box';
+    } catch (err) {
+      errorMsg.textContent = 'エラー: ' + err.message;
+      errorMsg.style.display = 'block';
+      resultBox.className = 'result-box';
+      resultBox.innerHTML = '<span class="placeholder">生成に失敗しました</span>';
+    }
+
+    btn.disabled = false;
+    btn.textContent = '⚡ ワンタップ生成';
+  }
+
+  function copyResult() {
+    const text = document.getElementById('resultBox').textContent;
+    if (!text || text.includes('ここに生成された')) return;
+    navigator.clipboard.writeText(text).then(() => showToast('コピーしました！'));
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  renderTabs();
+  renderPrompt();
+</script>
+
+</body>
+</html>
