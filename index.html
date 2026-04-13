@@ -272,24 +272,9 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
 <div class="prompt-card">
   <div class="prompt-card-header">
     <span class="prompt-card-title">プロンプト内容</span>
-    <div class="prompt-actions">
-      <button class="btn-edit" onclick="startEdit()">✏️ 編集</button>
-      <button class="btn-delete" onclick="confirmDelete()">🗑️ 削除</button>
-    </div>
   </div>
 
   <div id="promptPreview" class="prompt-preview"></div>
-
-  <div id="promptEdit" class="prompt-edit">
-    <div class="edit-label">タブ名</div>
-    <input type="text" class="tab-name-input" id="editName" placeholder="タブ名" />
-    <div class="edit-label">プロンプト</div>
-    <textarea id="editPrompt" rows="6"></textarea>
-    <div class="edit-actions">
-      <button class="btn-cancel" onclick="cancelEdit()">キャンセル</button>
-      <button class="btn-save" onclick="saveEdit()">保存</button>
-    </div>
-  </div>
 </div>
 
 <!-- Generate -->
@@ -310,17 +295,6 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
   </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal-overlay" id="deleteModal">
-  <div class="modal">
-    <h3>このプロンプトを削除しますか？</h3>
-    <div class="modal-actions">
-      <button class="btn-modal-cancel" onclick="closeDeleteModal()">キャンセル</button>
-      <button class="btn-modal-ok" onclick="deletePrompt()">削除</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -329,7 +303,7 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
 
   async function loadPrompts() {
     try {
-      const res = await fetch('/api/prompts');
+      const res = await fetch('/api/prompts?t=' + Date.now());
       prompts = await res.json();
     } catch {
       prompts = [{ name: 'Threads投稿', prompt: 'プロンプトを読み込めませんでした' }];
@@ -338,13 +312,6 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     renderPrompt();
   }
 
-  async function savePrompts() {
-    await fetch('/api/prompts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(prompts)
-    });
-  }
 
   function renderTabs() {
     const container = document.getElementById('tabsContainer');
@@ -353,59 +320,16 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
       const btn = document.createElement('button');
       btn.className = 'tab' + (i === activeIndex ? ' active' : '');
       btn.textContent = p.name;
-      btn.onclick = () => { activeIndex = i; cancelEdit(); renderTabs(); renderPrompt(); };
+      btn.onclick = () => { activeIndex = i; renderTabs(); renderPrompt(); };
       container.appendChild(btn);
     });
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn-add-tab';
-    addBtn.textContent = '＋ 追加';
-    addBtn.onclick = addPrompt;
-    container.appendChild(addBtn);
+
   }
 
   function renderPrompt() {
     document.getElementById('promptPreview').textContent = prompts[activeIndex].prompt;
   }
 
-  async function addPrompt() {
-    prompts.push({ name: '新規プロンプト', prompt: 'ここにプロンプトを入力してください。' });
-    activeIndex = prompts.length - 1;
-    await savePrompts(); renderTabs(); renderPrompt(); startEdit();
-  }
-
-  function startEdit() {
-    document.getElementById('promptPreview').style.display = 'none';
-    document.getElementById('promptEdit').style.display = 'block';
-    document.getElementById('editName').value = prompts[activeIndex].name;
-    document.getElementById('editPrompt').value = prompts[activeIndex].prompt;
-  }
-
-  function cancelEdit() {
-    document.getElementById('promptEdit').style.display = 'none';
-    document.getElementById('promptPreview').style.display = 'block';
-  }
-
-  async function saveEdit() {
-    prompts[activeIndex].name = document.getElementById('editName').value || 'プロンプト';
-    prompts[activeIndex].prompt = document.getElementById('editPrompt').value;
-    await savePrompts(); cancelEdit(); renderTabs(); renderPrompt();
-    showToast('保存しました');
-  }
-
-  function confirmDelete() {
-    if (prompts.length <= 1) { showToast('最後のプロンプトは削除できません'); return; }
-    document.getElementById('deleteModal').classList.add('show');
-  }
-
-  function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.remove('show');
-  }
-
-  async function deletePrompt() {
-    prompts.splice(activeIndex, 1);
-    activeIndex = Math.max(0, activeIndex - 1);
-    await savePrompts(); closeDeleteModal(); renderTabs(); renderPrompt();
-  }
 
   async function generate() {
     const prompt = prompts[activeIndex].prompt;
