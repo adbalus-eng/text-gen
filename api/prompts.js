@@ -7,38 +7,25 @@ const DEFAULT_PROMPTS = [
   }
 ];
 
-async function redisGet(redisUrl) {
-  const url = new URL(redisUrl);
-  const password = url.password;
-  const host = url.hostname;
-  const port = url.port;
+function parseRedisUrl(url) {
+  const u = new URL(url);
+  return {
+    host: u.hostname,
+    port: u.port || '6379',
+    password: u.password,
+  };
+}
 
-  const res = await fetch(`https://${host}:${port}`, {
-    method: 'POST',
+async function redisCommand(redisUrl, ...args) {
+  const { host, port, password } = parseRedisUrl(redisUrl);
+  const baseUrl = `https://${host}:${port}`;
+  const res = await fetch(`${baseUrl}/${args.map(encodeURIComponent).join('/')}`, {
     headers: {
-      'Authorization': `Bearer ${password}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${password}`,
     },
-    body: JSON.stringify(['GET', 'prompts']),
   });
   const data = await res.json();
   return data.result;
-}
-
-async function redisSet(redisUrl, value) {
-  const url = new URL(redisUrl);
-  const password = url.password;
-  const host = url.hostname;
-  const port = url.port;
-
-  await fetch(`https://${host}:${port}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${password}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(['SET', 'prompts', value]),
-  });
 }
 
 export default async function handler(req) {
@@ -46,10 +33,10 @@ export default async function handler(req) {
 
   if (req.method === 'GET') {
     try {
-      const raw = await redisGet(redisUrl);
+      const raw = await redisCommand(redisUrl, 'GET', 'prompts');
       const prompts = raw ? JSON.parse(raw) : DEFAULT_PROMPTS;
       return new Response(JSON.stringify(prompts), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
       });
     } catch {
       return new Response(JSON.stringify(DEFAULT_PROMPTS), {
@@ -61,7 +48,8 @@ export default async function handler(req) {
   if (req.method === 'POST') {
     try {
       const body = await req.json();
-      await redisSet(redisUrl, JSON.stringify(body));
+      const value = JSON.stringify(body);
+      await redisCommand(redisUrl, 'SET', 'prompts', value);
       return new Response(JSON.stringify({ ok: true }), {
         headers: { 'Content-Type': 'application/json' }
       });
