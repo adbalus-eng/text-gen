@@ -35,7 +35,7 @@ export default async function handler(req) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 200,
-      stream: true,
+      stream: false,
       messages: body.messages,
     }),
   });
@@ -48,11 +48,11 @@ export default async function handler(req) {
     });
   }
 
-  return new Response(upstream.body, {
+  const data = await upstream.json();
+  const text = data.content?.[0]?.text ?? '';
+
+  return new Response(JSON.stringify({ text }), {
     status: 200,
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-    },
+    headers: { 'Content-Type': 'application/json' },
   });
 }
