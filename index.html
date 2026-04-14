@@ -253,6 +253,70 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
 .modal-actions { display: flex; gap: 8px; margin-top: 14px; }
 .btn-modal-cancel { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
 .btn-modal-ok { flex: 1; background: #ff6b6b; border: none; color: #fff; border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+
+/* Page Nav */
+.page-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 16px;
+}
+.page-nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  letter-spacing: 1px;
+}
+.page-nav-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* URL Picker */
+.url-wrap { padding: 16px; }
+.url-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  font-size: 14px;
+  color: var(--accent3);
+  word-break: break-all;
+  min-height: 60px;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.url-box .placeholder { color: var(--text-dim); font-size: 13px; }
+.url-actions { display: flex; gap: 10px; }
+.btn-pick {
+  flex: 1;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  border-radius: var(--radius);
+  padding: 16px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  box-shadow: 0 8px 30px rgba(124,106,255,0.3);
+}
+.btn-copy-url {
+  background: var(--surface);
+  border: 1px solid var(--accent3);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  color: var(--accent3);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+}
 </style>
 </head>
 <body>
@@ -262,6 +326,13 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
   <p>ワンタップで文章を生成</p>
 </header>
 
+<!-- Page Nav -->
+<div class="page-nav">
+  <button class="page-nav-btn active" onclick="showPage('gen', this)">TEXT GEN</button>
+  <button class="page-nav-btn" onclick="showPage('url', this)">URL PICK</button>
+</div>
+
+<div id="page-gen">
 <!-- Tabs -->
 <div class="tabs-wrap">
   <div class="tabs-label">プロンプト選択</div>
@@ -294,6 +365,19 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     <span class="placeholder">ここに生成された文章が表示されます</span>
   </div>
 </div>
+
+</div><!-- /page-gen -->
+
+<!-- URL Pick Page -->
+<div id="page-url" style="display:none">
+<div class="url-wrap">
+  <div class="url-box" id="urlBox"><span class="placeholder">ボタンを押してURLを抽出</span></div>
+  <div class="url-actions">
+    <button class="btn-pick" onclick="pickUrl()">🎲 ランダム抽出</button>
+    <button class="btn-copy-url" onclick="copyUrl()">📋 コピー</button>
+  </div>
+</div>
+</div><!-- /page-url -->
 
 <div class="toast" id="toast"></div>
 
@@ -379,7 +463,30 @@ header p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
     setTimeout(() => toast.classList.remove('show'), 2000);
   }
 
+
+  function showPage(page, btn) {
+    document.getElementById('page-gen').style.display = page === 'gen' ? 'block' : 'none';
+    document.getElementById('page-url').style.display = page === 'url' ? 'block' : 'none';
+    document.querySelectorAll('.page-nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  let currentUrl = '';
+
+  async function pickUrl() {
+    const res = await fetch('/api/urls?t=' + Date.now());
+    const data = await res.json();
+    currentUrl = data.url;
+    document.getElementById('urlBox').textContent = currentUrl;
+  }
+
+  function copyUrl() {
+    if (!currentUrl) return;
+    navigator.clipboard.writeText(currentUrl).then(() => showToast('コピーしました！'));
+  }
+
   loadPrompts();
+
 </script>
 
 </body>
